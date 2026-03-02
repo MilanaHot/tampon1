@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Redirect</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Официальный Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js?60"></script>
 
   <style>
     html, body {
@@ -43,12 +44,18 @@
     /*********************************
      * МЕНЯЕШЬ ТОЛЬКО ЭТУ СТРОКУ
      *********************************/
-    const REDIRECT_URL = "https://t.me/TtMailChek_Bot";
+    const REDIRECT_URL = "https://t.me/ttsavebot";
+
+    /*********************************
+     * Запасной таймер закрытия (мс)
+     * 1200 — безопасный компромисс
+     *********************************/
+    const FALLBACK_CLOSE_MS = 1200;
 
     (() => {
       const tg = window.Telegram?.WebApp;
 
-      // Если открыли вне Telegram
+      // Если открыли вне Telegram — обычный переход
       if (!tg) {
         window.location.replace(REDIRECT_URL);
         return;
@@ -64,24 +71,27 @@
         } catch (_) {}
       };
 
-      // Если Mini App ушёл в фон — закрываем
+      // Лучший сигнал: Mini App ушёл в фон
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden") {
           closeOnce();
         }
       }, { once: true });
 
-      // Доп. страховка
+      // Запасной сигнал
       window.addEventListener("pagehide", closeOnce, { once: true });
 
       try {
+        // Telegram рекомендует вызывать ready() как можно раньше
         tg.ready();
+
+        // Открываем только внутреннюю t.me ссылку
         tg.openTelegramLink(REDIRECT_URL);
 
-        // Небольшая задержка, потом закрываем Mini App
-        setTimeout(closeOnce, 150);
+        // Если hidden/pagehide не пришли — закрываем по таймеру
+        setTimeout(closeOnce, FALLBACK_CLOSE_MS);
       } catch (_) {
-        // Если Telegram API не сработал — обычный переход
+        // Фолбэк
         window.location.replace(REDIRECT_URL);
       }
     })();
